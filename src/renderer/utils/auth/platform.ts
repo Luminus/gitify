@@ -13,6 +13,9 @@ export function resolvePlatform(forge: Forge, hostname: Hostname): PlatformType 
   if (forge === 'gitea') {
     return 'Gitea';
   }
+  if (forge === 'gitlab') {
+    return 'GitLab';
+  }
   return getPlatformFromHostname(hostname);
 }
 

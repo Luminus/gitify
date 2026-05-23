@@ -6,7 +6,8 @@ export type PlatformType =
   | 'GitHub Cloud'
   | 'GitHub Enterprise Server'
   | 'GitHub Enterprise Cloud with Data Residency'
-  | 'Gitea';
+  | 'Gitea'
+  | 'GitLab';
 
 export interface LoginOAuthWebOptions {
   hostname: Hostname;

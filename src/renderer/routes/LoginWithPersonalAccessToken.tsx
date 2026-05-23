@@ -62,6 +62,7 @@ export const LoginWithPersonalAccessTokenRoute: FC = () => {
   const forge: Forge = reAuthAccount?.forge ?? stateForge ?? 'github';
   const adapter = getAdapter(forge);
   const isGitea = forge === 'gitea';
+  const isGitLab = forge === 'gitlab';
 
   const { loginWithPersonalAccessToken } = useAppContext();
 
@@ -117,7 +118,11 @@ export const LoginWithPersonalAccessTokenRoute: FC = () => {
   return (
     <Page testId="Login With Personal Access Token">
       <Header icon={KeyIcon}>
-        {isGitea ? 'Login to Gitea with Personal Access Token' : 'Login with Personal Access Token'}
+        {isGitea
+          ? 'Login to Gitea with Personal Access Token'
+          : isGitLab
+            ? 'Login to GitLab with Personal Access Token'
+            : 'Login with Personal Access Token'}
       </Header>
 
       <Contents>
@@ -143,7 +148,9 @@ export const LoginWithPersonalAccessTokenRoute: FC = () => {
               <Text as="i">
                 {isGitea
                   ? 'Your Gitea instance hostname (for example gitea.example.com)'
-                  : 'Change only if you are using GitHub Enterprise Server'}
+                  : isGitLab
+                    ? 'Your GitLab instance hostname (for example gitlab.example.com)'
+                    : 'Change only if you are using GitHub Enterprise Server'}
               </Text>
             </FormControl.Caption>
             <TextInput
@@ -152,7 +159,7 @@ export const LoginWithPersonalAccessTokenRoute: FC = () => {
               data-testid="login-hostname"
               name="hostname"
               onChange={handleInputChange}
-              placeholder={isGitea ? 'gitea.example.com' : 'github.com'}
+              placeholder={isGitea ? 'gitea.example.com' : isGitLab ? 'gitlab.com' : 'github.com'}
               value={formData.hostname}
             />
             {errors.hostname && (
@@ -176,11 +183,13 @@ export const LoginWithPersonalAccessTokenRoute: FC = () => {
               <Text className="text-xs">
                 {isGitea
                   ? 'on your Gitea instance to create a token, then paste it below.'
-                  : 'on GitHub to paste the token below.'}
+                  : isGitLab
+                    ? 'on your GitLab instance to create a token, then paste it below.'
+                    : 'on GitHub to paste the token below.'}
               </Text>
             </Stack>
 
-            {!isGitea && (
+            {!isGitea && !isGitLab && (
               <Text as="i" className="text-xs">
                 The{' '}
                 <Tooltip direction="se" text={formatRecommendedOAuthScopes()}>
@@ -205,7 +214,9 @@ export const LoginWithPersonalAccessTokenRoute: FC = () => {
               placeholder={
                 isGitea
                   ? 'Your Gitea personal access token'
-                  : 'Your generated token (40 characters)'
+                  : isGitLab
+                    ? 'Your GitLab personal access token (glpat-...)'
+                    : 'Your generated token (40 characters)'
               }
               trailingAction={
                 <TextInput.Action
@@ -225,7 +236,16 @@ export const LoginWithPersonalAccessTokenRoute: FC = () => {
       </Contents>
 
       <Footer justify="space-between">
-        <Tooltip direction="ne" text={isGitea ? 'Gitea API documentation' : 'GitHub documentation'}>
+        <Tooltip
+          direction="ne"
+          text={
+            isGitea
+              ? 'Gitea API documentation'
+              : isGitLab
+                ? 'GitLab API documentation'
+                : 'GitHub documentation'
+          }
+        >
           <Button
             data-testid="login-docs"
             leadingVisual={BookIcon}

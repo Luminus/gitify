@@ -2,6 +2,7 @@ import type { Account, Hostname, SettingsState } from '../../../types';
 import type { GiteaNotificationThread, GiteaUser } from './types';
 
 import { isValidHostname } from '../../auth/utils';
+import { HttpError } from '../../core/httpError';
 import { decryptValue } from '../../system/comms';
 
 const PAGE_SIZE = 100;
@@ -26,8 +27,8 @@ async function authHeaders(account: Account): Promise<HeadersInit> {
  * the request (including the Authorization header) back, and that error
  * propagates to logs.
  */
-function apiError(status: number, statusText: string): Error {
-  return new Error(`Gitea API ${status} ${statusText}`);
+function apiError(status: number, statusText: string): HttpError {
+  return new HttpError(status, statusText);
 }
 
 async function giteaRequest<T>(account: Account, pathname: string, init?: RequestInit): Promise<T> {

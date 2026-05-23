@@ -3,6 +3,7 @@ import type { ForgeAdapter } from './types';
 
 import { giteaAdapter } from './gitea/adapter';
 import { githubAdapter } from './github/adapter';
+import { gitlabAdapter } from './gitlab/adapter';
 
 /**
  * Central forge adapter registry.
@@ -13,6 +14,7 @@ import { githubAdapter } from './github/adapter';
 const ADAPTERS: Record<Forge, ForgeAdapter> = {
   github: githubAdapter,
   gitea: giteaAdapter,
+  gitlab: gitlabAdapter,
 };
 
 /** Single source of truth for the runtime set of registered forges. */

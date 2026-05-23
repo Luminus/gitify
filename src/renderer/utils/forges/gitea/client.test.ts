@@ -92,7 +92,7 @@ describe('renderer/utils/forges/gitea/client.ts', () => {
           fetchAllNotifications: false,
           fetchReadNotifications: false,
         } as SettingsState),
-      ).rejects.toThrow(/^Gitea API 403 Forbidden$/);
+      ).rejects.toThrow(/^HTTP 403 Forbidden$/);
       // The thrown error must not include the response body — a hostile
       // server could echo back the Authorization header into logs.
       await expect(
@@ -151,7 +151,7 @@ describe('renderer/utils/forges/gitea/client.ts', () => {
 
       await expect(
         giteaGetJson(mockGiteaAccount, 'https://gitea.example.com/api/v1/x'),
-      ).rejects.toThrow(/^Gitea API 500 Server Error$/);
+      ).rejects.toThrow(/^HTTP 500 Server Error$/);
     });
 
     it('refuses cross-origin URLs without sending a request', async () => {

@@ -6,6 +6,7 @@ import { EVENTS } from '../../../shared/events';
 import type { GitifyError } from '../../types';
 
 import { Errors } from '../core/errors';
+import { HttpError } from '../core/httpError';
 import { rendererLogError } from '../core/logger';
 
 /**
@@ -49,6 +50,22 @@ export function determineFailureType(
         return Errors.NETWORK;
       default:
         break;
+    }
+  }
+
+  // Handle plain HTTP errors from non-Octokit clients (Gitea, GitLab)
+  if (err instanceof HttpError) {
+    switch (err.status) {
+      case 401:
+        return Errors.BAD_CREDENTIALS;
+      case 403:
+        return Errors.MISSING_SCOPES;
+      case 429:
+        return Errors.RATE_LIMITED;
+      case 500:
+        return Errors.NETWORK;
+      default:
+        return Errors.UNKNOWN;
     }
   }
 
