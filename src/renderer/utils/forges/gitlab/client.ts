@@ -1,5 +1,11 @@
 import type { Account, Hostname, SettingsState } from '../../../types';
-import type { GitLabTodo, GitLabUser } from './types';
+import type {
+  GitLabIssue,
+  GitLabProject,
+  GitLabProjectNotificationSettings,
+  GitLabTodo,
+  GitLabUser,
+} from './types';
 
 import { isValidHostname } from '../../auth/utils';
 import { HttpError } from '../../core/httpError';
@@ -98,6 +104,61 @@ export function fetchGitLabAuthenticatedUser(account: Account): Promise<GitLabUs
 
 export async function markGitLabTodoAsDone(account: Account, todoId: string): Promise<void> {
   await gitlabRequest<void>(account, `todos/${todoId}/mark_as_done`, { method: 'POST' });
+}
+
+export async function listGitLabMemberProjects(account: Account): Promise<GitLabProject[]> {
+  const all: GitLabProject[] = [];
+  let page = 1;
+  while (true) {
+    const batch = await gitlabRequest<GitLabProject[]>(
+      account,
+      `projects?membership=true&archived=false&per_page=${PAGE_SIZE}&page=${page}`,
+    );
+    all.push(...batch);
+    if (batch.length < PAGE_SIZE) {
+      break;
+    }
+    page++;
+  }
+  return all;
+}
+
+export function getGitLabProjectNotificationSettings(
+  account: Account,
+  projectId: number,
+): Promise<GitLabProjectNotificationSettings> {
+  return gitlabRequest<GitLabProjectNotificationSettings>(
+    account,
+    `projects/${projectId}/notification_settings`,
+  );
+}
+
+export function listGitLabProjectIssues(
+  account: Account,
+  projectId: number,
+  createdAfter: string,
+): Promise<GitLabIssue[]> {
+  const params = new URLSearchParams({
+    state: 'opened',
+    created_after: createdAfter,
+    per_page: String(PAGE_SIZE),
+  });
+  return gitlabRequest<GitLabIssue[]>(account, `projects/${projectId}/issues?${params}`);
+}
+
+/**
+ * Returns open issues across all accessible projects where the authenticated
+ * user has added any emoji reaction. Used for "participating only" mode to
+ * surface issues the user has interacted with but that may not appear as todos.
+ */
+export function listGitLabInteractedIssues(account: Account): Promise<GitLabIssue[]> {
+  const params = new URLSearchParams({
+    scope: 'all',
+    state: 'opened',
+    my_reaction_emoji: 'any',
+    per_page: String(PAGE_SIZE),
+  });
+  return gitlabRequest<GitLabIssue[]>(account, `issues?${params}`);
 }
 
 /**

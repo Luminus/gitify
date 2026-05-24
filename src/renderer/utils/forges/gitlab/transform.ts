@@ -8,7 +8,13 @@ import {
   toLink,
   toLinkOrNull,
 } from '../../../types';
-import type { GitLabTodo, GitLabTodoActionName, GitLabTodoTargetType } from './types';
+import type {
+  GitLabIssue,
+  GitLabProject,
+  GitLabTodo,
+  GitLabTodoActionName,
+  GitLabTodoTargetType,
+} from './types';
 
 import { getReasonDetails } from '../../notifications/reason';
 
@@ -75,6 +81,74 @@ function transformRepository(raw: GitLabTodo, account: Account): GitifyRepositor
     owner: {
       login: ownerLogin,
       avatarUrl: toLink(ownerAvatarUrl),
+      type: ownerType,
+    },
+  };
+}
+
+export function transformGitLabIssues(
+  issues: GitLabIssue[],
+  projectMap: Map<number, GitLabProject>,
+  account: Account,
+): RawGitifyNotification[] {
+  return issues.map((issue) => transformGitLabIssue(issue, projectMap, account));
+}
+
+function transformGitLabIssue(
+  issue: GitLabIssue,
+  projectMap: Map<number, GitLabProject>,
+  account: Account,
+): RawGitifyNotification {
+  const reasonDetails = getReasonDetails('subscribed');
+  const project = projectMap.get(issue.project_id);
+
+  return {
+    id: `issue-${issue.id}`,
+    unread: true,
+    updatedAt: issue.updated_at,
+    reason: {
+      code: 'subscribed',
+      title: reasonDetails.title,
+      description: reasonDetails.description ?? '',
+    },
+    subject: {
+      title: issue.title,
+      type: 'Issue',
+      url: null,
+      latestCommentUrl: null,
+      htmlUrl: toLinkOrNull(issue.web_url) ?? undefined,
+      number: issue.iid,
+    },
+    repository: transformIssueRepository(issue, project, account),
+    account,
+    order: 0,
+  };
+}
+
+function transformIssueRepository(
+  _issue: GitLabIssue,
+  project: GitLabProject | undefined,
+  account: Account,
+): GitifyRepository {
+  if (!project) {
+    return {
+      name: 'unknown',
+      fullName: 'unknown',
+      htmlUrl: toLink(`https://${account.hostname}`),
+      owner: { login: 'unknown', avatarUrl: toLink(''), type: 'User' },
+    };
+  }
+
+  const ownerLogin = project.path_with_namespace.split('/')[0] ?? 'unknown';
+  const ownerType = project.namespace?.kind === 'group' ? 'Organization' : 'User';
+
+  return {
+    name: project.name,
+    fullName: project.path_with_namespace,
+    htmlUrl: toLink(project.web_url ?? `https://${account.hostname}`),
+    owner: {
+      login: ownerLogin,
+      avatarUrl: toLink(project.namespace?.avatar_url ?? ''),
       type: ownerType,
     },
   };

@@ -66,6 +66,25 @@ export interface GitLabTodoTarget {
   sha?: string;
 }
 
+export interface GitLabProjectNotificationSettings {
+  level: 'disabled' | 'participating' | 'watch' | 'global' | 'mention' | 'custom';
+  events?: {
+    new_issue?: boolean;
+  };
+}
+
+export interface GitLabIssue {
+  id: number;
+  iid: number;
+  project_id: number;
+  title: string;
+  state: 'opened' | 'closed';
+  web_url: string | null;
+  created_at: string;
+  updated_at: string;
+  author: GitLabUser;
+}
+
 export interface GitLabTodo {
   id: number;
   project?: GitLabProject;

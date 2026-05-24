@@ -22,7 +22,12 @@ import {
   listGitLabTodos,
   markGitLabTodoAsDone,
 } from './client';
-import { transformGitLabTodos } from './transform';
+import { transformGitLabIssues, transformGitLabTodos } from './transform';
+import {
+  advanceTimestampForIssue,
+  listGitLabParticipatingIssues,
+  listGitLabWatchedIssues,
+} from './watchedIssues';
 
 const GITLAB_DOCS_URL = 'https://docs.gitlab.com/user/profile/personal_access_tokens/' as Link;
 
@@ -49,7 +54,26 @@ async function listNotifications(
   settings: SettingsState,
 ): Promise<RawGitifyNotification[]> {
   const raw = await listGitLabTodos(account, settings);
-  return transformGitLabTodos(raw, account);
+  const todoNotifications = transformGitLabTodos(raw, account);
+
+  // Fetch extra issues depending on participation mode.
+  // Failures are logged but never block the todo notifications.
+  try {
+    const { issues, projectMap } = await (settings.participating
+      ? listGitLabParticipatingIssues(account) // CrosshairsIcon: emoji-reacted issues
+      : listGitLabWatchedIssues(account)); // EyeIcon: new issues in watched projects
+
+    if (issues.length > 0) {
+      const todoUrls = new Set(todoNotifications.map((n) => n.subject.htmlUrl));
+      const unique = issues.filter((issue) => !todoUrls.has(issue.web_url as never));
+      const issueNotifications = transformGitLabIssues(unique, projectMap, account);
+      return [...todoNotifications, ...issueNotifications];
+    }
+  } catch {
+    // Extra-issue fetch failures must not block todo notifications
+  }
+
+  return todoNotifications;
 }
 
 function getDisplayHelpers(notification: RawGitifyNotification): NotificationDisplayHelpers {
@@ -75,8 +99,24 @@ export const gitlabAdapter: ForgeAdapter = {
   // GitLab todos have no separate "read" state — marking as done is the only
   // action. We alias markThreadAsRead to the same operation so that the app's
   // generic "open & mark read" flow works without a no-op.
-  markThreadAsRead: (account, threadId) => markGitLabTodoAsDone(account, threadId),
-  markThreadAsDone: (account, threadId) => markGitLabTodoAsDone(account, threadId),
+  //
+  // Watched-issue notifications use an "issue-<id>" prefix. There is no API
+  // to dismiss them; instead we advance the local last-seen cursor so the
+  // issue won't appear again in future fetches.
+  markThreadAsRead: (account, threadId) => {
+    if (threadId.startsWith('issue-')) {
+      advanceTimestampForIssue(account, threadId);
+      return Promise.resolve();
+    }
+    return markGitLabTodoAsDone(account, threadId);
+  },
+  markThreadAsDone: (account, threadId) => {
+    if (threadId.startsWith('issue-')) {
+      advanceTimestampForIssue(account, threadId);
+      return Promise.resolve();
+    }
+    return markGitLabTodoAsDone(account, threadId);
+  },
   unsubscribeThread: () => {
     throw new Error(
       'Unsubscribing from threads is not supported for GitLab accounts; check capabilities.unsubscribeThread before calling.',
